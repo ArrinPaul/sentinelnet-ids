@@ -15,6 +15,12 @@ Complete anti-overfitting pipeline with:
 Supports two difficulty modes:
   - 'simple': Trains on clearly separated data (~98% F1 expected)
   - 'realistic': Trains on overlapping data (~85-92% F1 expected)
+
+v3.1 Enhancements (Realistic Mode):
+  - 7 additional derived features (burst_intensity, traffic_efficiency, etc.)
+  - Expanded hyperparameter grid (320 combinations for realistic mode)
+  - Ensemble weight optimization via validation set grid search
+  - More granular contamination values for subtle attack detection
 """
 
 import pandas as pd
@@ -115,8 +121,13 @@ def encode_protocol(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def add_derived_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Add engineered features that capture relationships between raw features."""
+    """
+    Add engineered features that capture relationships between raw features.
+    v3.1: Enhanced with statistical and behavioral features for better detection.
+    """
     df = df.copy()
+    
+    # ── Original features (v3.0) ──
     # Bytes per second: packet_rate × avg_packet_size (captures bandwidth usage)
     df["bytes_per_second"] = (df["packet_rate"] * df["avg_packet_size"]).round(1)
     # Port scan ratio: unique_ports / duration (how fast ports are being probed)
@@ -125,6 +136,41 @@ def add_derived_features(df: pd.DataFrame) -> pd.DataFrame:
     df["size_rate_ratio"] = (df["avg_packet_size"] / df["packet_rate"].clip(lower=0.1)).round(4)
     # Connection rate: connection_count / duration (brute force signal)
     df["conn_rate"] = (df["connection_count"] / df["duration"].clip(lower=0.1)).round(4)
+    
+    # ── NEW v3.1 features: Statistical patterns ──
+    # Burst intensity: connections × packet_rate (detects sudden spikes)
+    df["burst_intensity"] = np.log1p(df["connection_count"] * df["packet_rate"])
+    
+    # Traffic efficiency: bytes / (packets × connections) - normal traffic is efficient
+    df["traffic_efficiency"] = (
+        df["bytes_per_second"] / 
+        ((df["packet_rate"] * df["connection_count"]).clip(lower=1))
+    ).round(4)
+    
+    # Port diversity score: unique_ports / sqrt(connection_count) - scans have high diversity
+    df["port_diversity"] = (
+        df["unique_ports"] / np.sqrt(df["connection_count"].clip(lower=1))
+    ).round(4)
+    
+    # Connection density: connections per packet (brute force = high density)
+    df["connection_density"] = (
+        df["connection_count"] / df["packet_rate"].clip(lower=1)
+    ).round(4)
+    
+    # Packet size entropy: variance indicator (attacks often have uniform sizes)
+    # Simulated via avg_packet_size deviation from median (512 bytes)
+    df["size_deviation"] = np.abs(df["avg_packet_size"] - 512).round(1)
+    
+    # Duration efficiency: bytes transferred per second of duration
+    df["duration_efficiency"] = (
+        df["bytes_per_second"] / df["duration"].clip(lower=0.1)
+    ).round(1)
+    
+    # Rate concentration: packet_rate / unique_ports (floods have high concentration)
+    df["rate_concentration"] = (
+        df["packet_rate"] / df["unique_ports"].clip(lower=1)
+    ).round(4)
+    
     return df
 
 
@@ -226,12 +272,21 @@ def hyperparameter_search(X_train, X_val, X_attack_val):
     print(f"  Hyperparameter Search (Validation Set)")
     print(f"{'=' * 60}")
 
-    param_grid = {
-        "n_estimators": [100, 200, 300],
-        "contamination": [0.01, 0.02, 0.05],
-        "max_features": [0.5, 0.75, 1.0],
-        "max_samples": [0.5, 0.75, "auto"],
-    }
+    # v3.1: Enhanced grid with more granular contamination values for realistic mode
+    if DIFFICULTY == "realistic":
+        param_grid = {
+            "n_estimators": [100, 150, 200, 300],
+            "contamination": [0.015, 0.02, 0.025, 0.03, 0.04],  # More granular for subtle attacks
+            "max_features": [0.6, 0.75, 0.85, 1.0],
+            "max_samples": [0.6, 0.75, 0.85, "auto"],
+        }
+    else:  # simple mode
+        param_grid = {
+            "n_estimators": [100, 200, 300],
+            "contamination": [0.01, 0.02, 0.05],
+            "max_features": [0.5, 0.75, 1.0],
+            "max_samples": [0.5, 0.75, "auto"],
+        }
 
     best_f1 = -1
     best_params = {}
@@ -956,7 +1011,7 @@ def train():
     sys.stdout = logger
 
     print("=" * 60)
-    print("  SentinelNet ML Training Pipeline v3.0")
+    print("  SentinelNet ML Training Pipeline v3.1")
     print("  Anti-Overfitting + Ensemble + Visualizations")
     print("=" * 60)
     print(f"  Started: {time.strftime('%Y-%m-%d %H:%M:%S')}")
@@ -1071,8 +1126,46 @@ def train():
     joblib.dump(lof, ENSEMBLE_PATH)
     print(f"  LOF Model saved to: {ENSEMBLE_PATH}")
 
-    # ── Create Ensemble ──────────────────────────────────────────────────
-    ensemble = EnsembleAnomalyDetector(final_if, lof, if_weight=0.65, lof_weight=0.35, threshold=0.45)
+    # ── Optimize Ensemble Weights (v3.1) ─────────────────────────────────
+    print(f"\n{'=' * 60}")
+    print(f"  Optimizing Ensemble Weights (Validation Set)")
+    print(f"{'=' * 60}")
+    
+    best_ensemble_f1 = -1
+    best_ensemble_config = {"if_weight": 0.65, "lof_weight": 0.35, "threshold": 0.45}
+    
+    # Grid search over ensemble configurations
+    for if_w in [0.5, 0.6, 0.65, 0.7, 0.75, 0.8]:
+        lof_w = 1.0 - if_w
+        for thresh in [0.4, 0.45, 0.5, 0.55, 0.6]:
+            ens_temp = EnsembleAnomalyDetector(final_if, lof, if_weight=if_w, lof_weight=lof_w, threshold=thresh)
+            
+            # Evaluate on validation set
+            val_normal_preds = ens_temp.predict(X_val)
+            val_attack_preds = ens_temp.predict(X_attack_val_scaled)
+            
+            y_true = np.concatenate([np.zeros(len(X_val)), np.ones(len(X_attack_val_scaled))])
+            y_pred = np.concatenate([
+                (val_normal_preds == -1).astype(int),
+                (val_attack_preds == -1).astype(int),
+            ])
+            
+            f1_ens = f1_score(y_true, y_pred, zero_division=0)
+            
+            if f1_ens > best_ensemble_f1:
+                best_ensemble_f1 = f1_ens
+                best_ensemble_config = {"if_weight": if_w, "lof_weight": lof_w, "threshold": thresh}
+    
+    print(f"  Best ensemble F1 on validation: {best_ensemble_f1:.4f}")
+    print(f"  Best config: IF={best_ensemble_config['if_weight']:.2f}, LOF={best_ensemble_config['lof_weight']:.2f}, threshold={best_ensemble_config['threshold']:.2f}")
+
+    # ── Create Ensemble with Optimized Weights ──────────────────────────
+    ensemble = EnsembleAnomalyDetector(
+        final_if, lof,
+        if_weight=best_ensemble_config['if_weight'],
+        lof_weight=best_ensemble_config['lof_weight'],
+        threshold=best_ensemble_config['threshold']
+    )
 
     # ── Evaluate ALL Models on HELD-OUT TEST SET ─────────────────────────
     all_metrics = {}
@@ -1100,7 +1193,7 @@ def train():
 
         # Ensemble
         print(f"\n{'=' * 60}")
-        print(f"  Ensemble Model (IF 65% + LOF 35%, threshold=0.45)")
+        print(f"  Ensemble Model (IF {best_ensemble_config['if_weight']:.0%} + LOF {best_ensemble_config['lof_weight']:.0%}, threshold={best_ensemble_config['threshold']:.2f})")
         print(f"{'=' * 60}")
         ens_metrics = evaluate_model(ensemble, X_test, X_attack_test_scaled, "Ensemble (IF+LOF)")
         attack_type_results_ens = per_attack_evaluation(ensemble, X_attack_test_scaled, attack_types_test)
@@ -1224,11 +1317,7 @@ def train():
         "model_metrics": serializable_metrics,
         "learning_curve": learning_curve_data,
         "feature_importance": feat_importance,
-        "ensemble_config": {
-            "if_weight": 0.65,
-            "lof_weight": 0.35,
-            "threshold": 0.45,
-        },
+        "ensemble_config": best_ensemble_config,
         "visualizations": [
             "confusion_matrix.png",
             "confusion_matrices_all.png",
