@@ -11,6 +11,10 @@ Complete anti-overfitting pipeline with:
   - Full visualization suite (confusion matrix, ROC, learning curves, etc.)
   - Training logs saved to file
   - Full metrics report saved to JSON
+
+Supports two difficulty modes:
+  - 'simple': Trains on clearly separated data (~98% F1 expected)
+  - 'realistic': Trains on overlapping data (~85-92% F1 expected)
 """
 
 import pandas as pd
@@ -41,17 +45,27 @@ import time
 import sys
 import io
 
+# Allow command-line argument for difficulty: python train_model.py realistic
+DIFFICULTY = sys.argv[1] if len(sys.argv) > 1 else "simple"
+if DIFFICULTY not in ["simple", "realistic"]:
+    print(f"Invalid difficulty: {DIFFICULTY}. Use 'simple' or 'realistic'.")
+    sys.exit(1)
+
 # ── Paths ────────────────────────────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "data")
+DATA_DIR = os.path.join(BASE_DIR, "data", DIFFICULTY)
 ML_DIR = os.path.dirname(__file__)
-MODEL_PATH = os.path.join(ML_DIR, "model.pkl")
-ENSEMBLE_PATH = os.path.join(ML_DIR, "ensemble_lof.pkl")
-SCALER_PATH = os.path.join(ML_DIR, "scaler.pkl")
-METRICS_PATH = os.path.join(ML_DIR, "training_metrics.json")
-REPORT_PATH = os.path.join(ML_DIR, "TRAINING_REPORT.md")
-LOG_PATH = os.path.join(ML_DIR, "training.log")
-PLOTS_DIR = os.path.join(ML_DIR, "plots")
+RESULTS_DIR = os.path.join(ML_DIR, "results", DIFFICULTY)
+os.makedirs(RESULTS_DIR, exist_ok=True)
+
+MODEL_PATH = os.path.join(RESULTS_DIR, "model.pkl")
+ENSEMBLE_PATH = os.path.join(RESULTS_DIR, "ensemble_lof.pkl")
+SCALER_PATH = os.path.join(RESULTS_DIR, "scaler.pkl")
+METRICS_PATH = os.path.join(RESULTS_DIR, "training_metrics.json")
+REPORT_PATH = os.path.join(RESULTS_DIR, "TRAINING_REPORT.md")
+LOG_PATH = os.path.join(RESULTS_DIR, "training.log")
+PLOTS_DIR = os.path.join(RESULTS_DIR, "plots")
+os.makedirs(PLOTS_DIR, exist_ok=True)
 
 # ── Feature columns used for training ───────────────────────────────────────
 RAW_FEATURES = ["packet_rate", "unique_ports", "avg_packet_size", "duration", "protocol_flag", "connection_count"]
@@ -1216,15 +1230,15 @@ def train():
             "threshold": 0.45,
         },
         "visualizations": [
-            "ml/plots/confusion_matrix.png",
-            "ml/plots/confusion_matrices_all.png",
-            "ml/plots/roc_curves.png",
-            "ml/plots/learning_curves.png",
-            "ml/plots/per_attack_detection.png",
-            "ml/plots/feature_importance.png",
-            "ml/plots/score_distribution.png",
-            "ml/plots/model_comparison.png",
-            "ml/plots/cross_validation.png",
+            "confusion_matrix.png",
+            "confusion_matrices_all.png",
+            "roc_curves.png",
+            "learning_curves.png",
+            "per_attack_detection.png",
+            "feature_importance.png",
+            "score_distribution.png",
+            "model_comparison.png",
+            "cross_validation.png",
         ],
     }
 
@@ -1235,7 +1249,7 @@ def train():
     generate_training_report(metrics_output)
 
     print(f"\n{'=' * 60}")
-    print(f"  Training Pipeline Complete! ({elapsed:.1f}s)")
+    print(f"  Training Pipeline Complete ({DIFFICULTY.upper()} mode) — {elapsed:.1f}s")
     print(f"{'=' * 60}")
     print(f"  Model (IF):      {MODEL_PATH}")
     print(f"  Model (LOF):     {ENSEMBLE_PATH}")
@@ -1245,14 +1259,15 @@ def train():
     print(f"  Training Log:    {LOG_PATH}")
     print(f"  Plots:           {PLOTS_DIR}/")
     print(f"\n  Visualizations Generated:")
-    for viz in metrics_output["visualizations"]:
-        print(f"    ✓ {viz}")
+    viz_names = [os.path.basename(v) for v in metrics_output["visualizations"]]
+    for viz in viz_names:
+        print(f"    ✓ {PLOTS_DIR}/{viz}")
     print(f"{'=' * 60}")
 
     # Restore stdout
     sys.stdout = logger.terminal
     logger.close()
-    print(f"\n  Training complete. Log saved to: {LOG_PATH}")
+    print(f"\n  Training complete ({DIFFICULTY} mode). Log saved to: {LOG_PATH}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,497 @@
+{
+  "training_timestamp": "2026-02-10 15:20:29",
+  "training_duration_seconds": 106.2,
+  "pipeline_version": "3.0 (ensemble + visualizations)",
+  "dataset": {
+    "normal_total": 20000,
+    "attack_total": 8000,
+    "normal_train": 14000,
+    "normal_val": 3000,
+    "normal_test": 3000,
+    "attack_val": 1200,
+    "attack_test": 1200
+  },
+  "features": {
+    "all": [
+      "packet_rate",
+      "unique_ports",
+      "avg_packet_size",
+      "duration",
+      "protocol_flag",
+      "connection_count",
+      "bytes_per_second",
+      "port_scan_ratio",
+      "size_rate_ratio",
+      "conn_rate"
+    ],
+    "raw": [
+      "packet_rate",
+      "unique_ports",
+      "avg_packet_size",
+      "duration",
+      "protocol_flag",
+      "connection_count"
+    ],
+    "derived": [
+      "bytes_per_second",
+      "port_scan_ratio",
+      "size_rate_ratio",
+      "conn_rate"
+    ],
+    "count": 10
+  },
+  "scaler": {
+    "means": [
+      248.16869285714188,
+      3.8946428571428573,
+      711.0188142857127,
+      29.830449999999924,
+      0.5040714285714286,
+      8.777571428571429,
+      209579.3995857137,
+      0.6602514000000006,
+      7.7851732857143405,
+      1.1399543928571425
+    ],
+    "stds": [
+      322.96650302956914,
+      3.915204776748998,
+      433.24181236054807,
+      37.86563684281262,
+      0.6435264412688578,
+      14.059936388365353,
+      300812.9361879412,
+      1.6845513015881566,
+      11.282753153312452,
+      2.7442703074680446
+    ]
+  },
+  "best_hyperparameters": {
+    "n_estimators": 100,
+    "contamination": 0.02,
+    "max_features": 1.0,
+    "max_samples": 0.75
+  },
+  "hyperparameter_search": {
+    "total_combinations": 81,
+    "top_5": [
+      {
+        "n_estimators": 100,
+        "contamination": 0.02,
+        "max_features": 1.0,
+        "max_samples": "0.75",
+        "f1": 0.9235,
+        "recall": 0.8958,
+        "fpr": 0.0177
+      },
+      {
+        "n_estimators": 100,
+        "contamination": 0.02,
+        "max_features": 0.5,
+        "max_samples": "0.75",
+        "f1": 0.92,
+        "recall": 0.8917,
+        "fpr": 0.0187
+      },
+      {
+        "n_estimators": 300,
+        "contamination": 0.02,
+        "max_features": 1.0,
+        "max_samples": "0.75",
+        "f1": 0.92,
+        "recall": 0.8908,
+        "fpr": 0.0183
+      },
+      {
+        "n_estimators": 300,
+        "contamination": 0.02,
+        "max_features": 0.75,
+        "max_samples": "0.5",
+        "f1": 0.9193,
+        "recall": 0.8875,
+        "fpr": 0.0173
+      },
+      {
+        "n_estimators": 100,
+        "contamination": 0.02,
+        "max_features": 1.0,
+        "max_samples": "0.5",
+        "f1": 0.919,
+        "recall": 0.8842,
+        "fpr": 0.016
+      }
+    ]
+  },
+  "cross_validation": {
+    "avg_fp_rate": 0.0239,
+    "std_fp_rate": 0.002,
+    "fold_fp_rates": [
+      0.0229,
+      0.0243,
+      0.0236,
+      0.0275,
+      0.0214
+    ]
+  },
+  "model_metrics": {
+    "isolation_forest": {
+      "model": "Isolation Forest (tuned)",
+      "precision": 0.9384,
+      "recall": 0.8892,
+      "f1_score": 0.9131,
+      "roc_auc": 0.9805,
+      "normal_accuracy": 0.9767,
+      "attack_detection_rate": 0.8892,
+      "false_positive_rate": 0.0233,
+      "confusion_matrix": [
+        [
+          2930,
+          70
+        ],
+        [
+          133,
+          1067
+        ]
+      ],
+      "per_attack_type": {
+        "brute_force": {
+          "detected": 57,
+          "total": 115,
+          "rate": 0.4957
+        },
+        "dns_amplification": {
+          "detected": 131,
+          "total": 135,
+          "rate": 0.9704
+        },
+        "http_flood": {
+          "detected": 115,
+          "total": 128,
+          "rate": 0.8984
+        },
+        "icmp_flood": {
+          "detected": 97,
+          "total": 97,
+          "rate": 1.0
+        },
+        "port_scan": {
+          "detected": 127,
+          "total": 127,
+          "rate": 1.0
+        },
+        "protocol_anomaly": {
+          "detected": 110,
+          "total": 117,
+          "rate": 0.9402
+        },
+        "slowloris": {
+          "detected": 87,
+          "total": 105,
+          "rate": 0.8286
+        },
+        "stealth_probe": {
+          "detected": 107,
+          "total": 140,
+          "rate": 0.7643
+        },
+        "syn_flood": {
+          "detected": 125,
+          "total": 125,
+          "rate": 1.0
+        },
+        "udp_flood": {
+          "detected": 111,
+          "total": 111,
+          "rate": 1.0
+        }
+      }
+    },
+    "one_class_svm": {
+      "model": "One-Class SVM",
+      "precision": 0.8808,
+      "recall": 0.9425,
+      "f1_score": 0.9106,
+      "roc_auc": 0.9855,
+      "normal_accuracy": 0.949,
+      "attack_detection_rate": 0.9425,
+      "false_positive_rate": 0.051,
+      "confusion_matrix": [
+        [
+          2847,
+          153
+        ],
+        [
+          69,
+          1131
+        ]
+      ]
+    },
+    "local_outlier_factor": {
+      "model": "Local Outlier Factor",
+      "precision": 0.9505,
+      "recall": 0.8967,
+      "f1_score": 0.9228,
+      "roc_auc": 0.9805,
+      "normal_accuracy": 0.9813,
+      "attack_detection_rate": 0.8967,
+      "false_positive_rate": 0.0187,
+      "confusion_matrix": [
+        [
+          2944,
+          56
+        ],
+        [
+          124,
+          1076
+        ]
+      ]
+    },
+    "ensemble": {
+      "model": "Ensemble (IF+LOF)",
+      "precision": 0.9384,
+      "recall": 0.8892,
+      "f1_score": 0.9131,
+      "roc_auc": 0.9805,
+      "normal_accuracy": 0.9767,
+      "attack_detection_rate": 0.8892,
+      "false_positive_rate": 0.0233,
+      "confusion_matrix": [
+        [
+          2930,
+          70
+        ],
+        [
+          133,
+          1067
+        ]
+      ],
+      "per_attack_type": {
+        "brute_force": {
+          "detected": 57,
+          "total": 115,
+          "rate": 0.4957
+        },
+        "dns_amplification": {
+          "detected": 131,
+          "total": 135,
+          "rate": 0.9704
+        },
+        "http_flood": {
+          "detected": 115,
+          "total": 128,
+          "rate": 0.8984
+        },
+        "icmp_flood": {
+          "detected": 97,
+          "total": 97,
+          "rate": 1.0
+        },
+        "port_scan": {
+          "detected": 127,
+          "total": 127,
+          "rate": 1.0
+        },
+        "protocol_anomaly": {
+          "detected": 110,
+          "total": 117,
+          "rate": 0.9402
+        },
+        "slowloris": {
+          "detected": 87,
+          "total": 105,
+          "rate": 0.8286
+        },
+        "stealth_probe": {
+          "detected": 107,
+          "total": 140,
+          "rate": 0.7643
+        },
+        "syn_flood": {
+          "detected": 125,
+          "total": 125,
+          "rate": 1.0
+        },
+        "udp_flood": {
+          "detected": 111,
+          "total": 111,
+          "rate": 1.0
+        }
+      }
+    }
+  },
+  "learning_curve": [
+    {
+      "fraction": 0.1,
+      "n_samples": 1400,
+      "train_accuracy": 0.98,
+      "train_fpr": 0.02,
+      "val_f1": 0.8975,
+      "val_fpr": 0.016,
+      "val_recall": 0.8467,
+      "val_precision": 0.9549,
+      "val_accuracy": 0.984,
+      "test_f1": 0.8881,
+      "test_fpr": 0.024,
+      "test_recall": 0.8467,
+      "test_accuracy": 0.976
+    },
+    {
+      "fraction": 0.2,
+      "n_samples": 2800,
+      "train_accuracy": 0.98,
+      "train_fpr": 0.02,
+      "val_f1": 0.9133,
+      "val_fpr": 0.02,
+      "val_recall": 0.8825,
+      "val_precision": 0.9464,
+      "val_accuracy": 0.98,
+      "test_f1": 0.9029,
+      "test_fpr": 0.0257,
+      "test_recall": 0.8758,
+      "test_accuracy": 0.9743
+    },
+    {
+      "fraction": 0.3,
+      "n_samples": 4200,
+      "train_accuracy": 0.98,
+      "train_fpr": 0.02,
+      "val_f1": 0.9167,
+      "val_fpr": 0.0183,
+      "val_recall": 0.885,
+      "val_precision": 0.9508,
+      "val_accuracy": 0.9817,
+      "test_f1": 0.9107,
+      "test_fpr": 0.0227,
+      "test_recall": 0.8833,
+      "test_accuracy": 0.9773
+    },
+    {
+      "fraction": 0.5,
+      "n_samples": 7000,
+      "train_accuracy": 0.98,
+      "train_fpr": 0.02,
+      "val_f1": 0.9155,
+      "val_fpr": 0.0173,
+      "val_recall": 0.8808,
+      "val_precision": 0.9531,
+      "val_accuracy": 0.9827,
+      "test_f1": 0.9096,
+      "test_fpr": 0.0223,
+      "test_recall": 0.8808,
+      "test_accuracy": 0.9777
+    },
+    {
+      "fraction": 0.7,
+      "n_samples": 9800,
+      "train_accuracy": 0.98,
+      "train_fpr": 0.02,
+      "val_f1": 0.9179,
+      "val_fpr": 0.0173,
+      "val_recall": 0.885,
+      "val_precision": 0.9533,
+      "val_accuracy": 0.9827,
+      "test_f1": 0.9113,
+      "test_fpr": 0.0237,
+      "test_recall": 0.8867,
+      "test_accuracy": 0.9763
+    },
+    {
+      "fraction": 0.85,
+      "n_samples": 11900,
+      "train_accuracy": 0.98,
+      "train_fpr": 0.02,
+      "val_f1": 0.9196,
+      "val_fpr": 0.0167,
+      "val_recall": 0.8867,
+      "val_precision": 0.9551,
+      "val_accuracy": 0.9833,
+      "test_f1": 0.9071,
+      "test_fpr": 0.0237,
+      "test_recall": 0.8792,
+      "test_accuracy": 0.9763
+    },
+    {
+      "fraction": 1.0,
+      "n_samples": 14000,
+      "train_accuracy": 0.98,
+      "train_fpr": 0.02,
+      "val_f1": 0.9235,
+      "val_fpr": 0.0177,
+      "val_recall": 0.8958,
+      "val_precision": 0.953,
+      "val_accuracy": 0.9823,
+      "test_f1": 0.9131,
+      "test_fpr": 0.0233,
+      "test_recall": 0.8892,
+      "test_accuracy": 0.9767
+    }
+  ],
+  "feature_importance": {
+    "bytes_per_second": {
+      "mean": 0.018109,
+      "std": 0.000177,
+      "relative": 17.41
+    },
+    "packet_rate": {
+      "mean": 0.016815,
+      "std": 0.000154,
+      "relative": 16.17
+    },
+    "avg_packet_size": {
+      "mean": 0.013819,
+      "std": 0.000281,
+      "relative": 13.29
+    },
+    "duration": {
+      "mean": 0.011839,
+      "std": 0.000115,
+      "relative": 11.38
+    },
+    "port_scan_ratio": {
+      "mean": 0.009238,
+      "std": 0.0002,
+      "relative": 8.88
+    },
+    "size_rate_ratio": {
+      "mean": 0.007896,
+      "std": 0.000135,
+      "relative": 7.59
+    },
+    "conn_rate": {
+      "mean": 0.007053,
+      "std": 6.2e-05,
+      "relative": 6.78
+    },
+    "connection_count": {
+      "mean": 0.006984,
+      "std": 0.000181,
+      "relative": 6.72
+    },
+    "unique_ports": {
+      "mean": 0.006368,
+      "std": 0.000127,
+      "relative": 6.12
+    },
+    "protocol_flag": {
+      "mean": 0.005871,
+      "std": 0.000188,
+      "relative": 5.65
+    }
+  },
+  "ensemble_config": {
+    "if_weight": 0.65,
+    "lof_weight": 0.35,
+    "threshold": 0.45
+  },
+  "visualizations": [
+    "confusion_matrix.png",
+    "confusion_matrices_all.png",
+    "roc_curves.png",
+    "learning_curves.png",
+    "per_attack_detection.png",
+    "feature_importance.png",
+    "score_distribution.png",
+    "model_comparison.png",
+    "cross_validation.png"
+  ]
+}

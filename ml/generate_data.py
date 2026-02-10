@@ -11,11 +11,22 @@ Features per record:
   - packet_rate, unique_ports, avg_packet_size, duration, protocol (raw)
   - connection_count (helps distinguish brute force)
   - attack_type (label for attack rows only)
+
+Difficulty modes:
+  - 'simple': Clear separation between normal/attack (easier to learn, ~98% F1)
+  - 'realistic': More overlap and subtle attacks (harder, real-world scenario, ~85-92% F1)
 """
 
 import pandas as pd
 import numpy as np
 import os
+import sys
+
+# Allow command-line argument for difficulty: python generate_data.py realistic
+DIFFICULTY = sys.argv[1] if len(sys.argv) > 1 else "simple"
+if DIFFICULTY not in ["simple", "realistic"]:
+    print(f"Invalid difficulty: {DIFFICULTY}. Use 'simple' or 'realistic'.")
+    sys.exit(1)
 
 np.random.seed(42)
 
@@ -97,32 +108,64 @@ icmp_traffic = {
 # Profile 5: *** BORDERLINE / EDGE CASES (10%) *** — legitimate traffic that LOOKS suspicious
 # These prevent overfitting by teaching the model that high rates aren't always attacks
 n_edge = int(n_normal * 0.10)
-edge_cases = {
-    "src_ip": random_ips(NORMAL_SUBNETS, n_edge),
-    "dst_ip": random_ips(DST_SUBNETS, n_edge),
-    "packet_rate": np.concatenate([
-        np.random.uniform(800, 1800, n_edge // 3),       # high rate but legitimate (CDN/backup)
-        np.random.uniform(50, 300, n_edge // 3),          # normal rate but many ports (microservices)
-        np.random.uniform(100, 600, n_edge - 2 * (n_edge // 3)),  # long-lived connections (SSH/VPN)
-    ]).round(1),
-    "unique_ports": np.concatenate([
-        np.random.randint(1, 4, n_edge // 3),             # few ports (CDN/backup)
-        np.random.randint(8, 25, n_edge // 3),            # many ports (microservices)
-        np.random.randint(1, 5, n_edge - 2 * (n_edge // 3)),  # few ports (SSH/VPN)
-    ]),
-    "avg_packet_size": np.random.normal(loc=700, scale=400, size=n_edge).clip(40, 1500).round(1),
-    "protocol": np.random.choice(["TCP", "UDP"], n_edge, p=[0.7, 0.3]),
-    "duration": np.concatenate([
-        np.random.uniform(1, 20, n_edge // 3),            # short but fast
-        np.random.uniform(5, 60, n_edge // 3),            # medium
-        np.random.uniform(60, 300, n_edge - 2 * (n_edge // 3)),  # long-lived (SSH/VPN)
-    ]).round(1),
-    "connection_count": np.concatenate([
-        np.random.randint(1, 8, n_edge // 3),
-        np.random.randint(3, 20, n_edge // 3),            # microservices = more connections
-        np.random.randint(1, 4, n_edge - 2 * (n_edge // 3)),
-    ]),
-}
+if DIFFICULTY == "simple":
+    edge_cases = {
+        "src_ip": random_ips(NORMAL_SUBNETS, n_edge),
+        "dst_ip": random_ips(DST_SUBNETS, n_edge),
+        "packet_rate": np.concatenate([
+            np.random.uniform(800, 1800, n_edge // 3),       # high rate but legitimate (CDN/backup)
+            np.random.uniform(50, 300, n_edge // 3),          # normal rate but many ports (microservices)
+            np.random.uniform(100, 600, n_edge - 2 * (n_edge // 3)),  # long-lived connections (SSH/VPN)
+        ]).round(1),
+        "unique_ports": np.concatenate([
+            np.random.randint(1, 4, n_edge // 3),             # few ports (CDN/backup)
+            np.random.randint(8, 25, n_edge // 3),            # many ports (microservices)
+            np.random.randint(1, 5, n_edge - 2 * (n_edge // 3)),  # few ports (SSH/VPN)
+        ]),
+        "avg_packet_size": np.random.normal(loc=700, scale=400, size=n_edge).clip(40, 1500).round(1),
+        "protocol": np.random.choice(["TCP", "UDP"], n_edge, p=[0.7, 0.3]),
+        "duration": np.concatenate([
+            np.random.uniform(1, 20, n_edge // 3),            # short but fast
+            np.random.uniform(5, 60, n_edge // 3),            # medium
+            np.random.uniform(60, 300, n_edge - 2 * (n_edge // 3)),  # long-lived (SSH/VPN)
+        ]).round(1),
+        "connection_count": np.concatenate([
+            np.random.randint(1, 8, n_edge // 3),
+            np.random.randint(3, 20, n_edge // 3),            # microservices = more connections
+            np.random.randint(1, 4, n_edge - 2 * (n_edge // 3)),
+        ]),
+    }
+else:  # realistic mode
+    edge_cases = {
+        "src_ip": random_ips(NORMAL_SUBNETS, n_edge),
+        "dst_ip": random_ips(DST_SUBNETS, n_edge),
+        "packet_rate": np.concatenate([
+            np.random.uniform(800, 2500, n_edge // 4),       # HIGHER rate (CDN/backup/batch jobs)
+            np.random.uniform(50, 400, n_edge // 4),          # normal rate but many ports (microservices)
+            np.random.uniform(100, 800, n_edge // 4),         # medium-high rate
+            np.random.uniform(200, 1500, n_edge - 3 * (n_edge // 4)),  # bulk transfers
+        ]).round(1),
+        "unique_ports": np.concatenate([
+            np.random.randint(1, 6, n_edge // 4),
+            np.random.randint(8, 35, n_edge // 4),            # many ports (microservices)
+            np.random.randint(2, 10, n_edge // 4),
+            np.random.randint(1, 8, n_edge - 3 * (n_edge // 4)),
+        ]),
+        "avg_packet_size": np.random.normal(loc=700, scale=400, size=n_edge).clip(40, 1500).round(1),
+        "protocol": np.random.choice(["TCP", "UDP"], n_edge, p=[0.7, 0.3]),
+        "duration": np.concatenate([
+            np.random.uniform(1, 30, n_edge // 4),
+            np.random.uniform(5, 90, n_edge // 4),
+            np.random.uniform(10, 120, n_edge // 4),
+            np.random.uniform(60, 300, n_edge - 3 * (n_edge // 4)),
+        ]).round(1),
+        "connection_count": np.concatenate([
+            np.random.randint(5, 25, n_edge // 4),
+            np.random.randint(10, 50, n_edge // 4),           # HIGHER connection count (microservices)
+            np.random.randint(15, 80, n_edge // 4),           # Bulk operations
+            np.random.randint(20, 120, n_edge - 3 * (n_edge // 4)),  # Server tasks, automated systems
+        ]),
+    }
 
 # Profile 6: IoT / sensor traffic (5%) — periodic, predictable, low entropy
 n_iot = int(n_normal * 0.05)
@@ -206,16 +249,28 @@ udp_flood = {
 
 # Attack 4: Slowloris — low rate, TCP, very long duration, few ports
 n_slow = 800
-slowloris = {
-    "src_ip": random_ips(ATTACK_SUBNETS, n_slow),
-    "dst_ip": random_ips(DST_SUBNETS, n_slow),
-    "packet_rate": np.random.uniform(3, 40, n_slow).round(1),
-    "unique_ports": np.random.randint(1, 3, n_slow),
-    "avg_packet_size": np.random.uniform(15, 80, n_slow).round(1),
-    "protocol": np.full(n_slow, "TCP"),
-    "duration": np.random.uniform(100, 900, n_slow).round(1),
-    "connection_count": np.random.randint(30, 200, n_slow),  # many half-open connections
-}
+if DIFFICULTY == "simple":
+    slowloris = {
+        "src_ip": random_ips(ATTACK_SUBNETS, n_slow),
+        "dst_ip": random_ips(DST_SUBNETS, n_slow),
+        "packet_rate": np.random.uniform(3, 40, n_slow).round(1),
+        "unique_ports": np.random.randint(1, 3, n_slow),
+        "avg_packet_size": np.random.uniform(15, 80, n_slow).round(1),
+        "protocol": np.full(n_slow, "TCP"),
+        "duration": np.random.uniform(100, 900, n_slow).round(1),
+        "connection_count": np.random.randint(30, 200, n_slow),  # many half-open connections
+    }
+else:  # realistic
+    slowloris = {
+        "src_ip": random_ips(ATTACK_SUBNETS, n_slow),
+        "dst_ip": random_ips(DST_SUBNETS, n_slow),
+        "packet_rate": np.random.uniform(2, 80, n_slow).round(1),  # Overlap more with normal
+        "unique_ports": np.random.randint(1, 4, n_slow),
+        "avg_packet_size": np.random.uniform(15, 120, n_slow).round(1),
+        "protocol": np.full(n_slow, "TCP"),
+        "duration": np.random.uniform(50, 900, n_slow).round(1),
+        "connection_count": np.random.randint(15, 100, n_slow),  # Some overlap with normal edge cases
+    }
 
 # Attack 5: DNS Amplification — high rate, UDP, large response packets
 n_dns_amp = 800
@@ -232,30 +287,66 @@ dns_amp = {
 
 # Attack 6: Protocol Anomaly — unusual protocols, varied patterns
 n_proto = 800
-protocol_anomaly = {
-    "src_ip": random_ips(ATTACK_SUBNETS, n_proto),
-    "dst_ip": random_ips(DST_SUBNETS, n_proto),
-    "packet_rate": np.random.uniform(30, 3500, n_proto).round(1),
-    "unique_ports": np.random.randint(2, 200, n_proto),
-    "avg_packet_size": np.random.uniform(40, 600, n_proto).round(1),
-    "protocol": np.random.choice(["GRE", "ESP", "AH", "SCTP", "IGMP", "PIM"], n_proto),
-    "duration": np.random.uniform(0.3, 40, n_proto).round(1),
-    "connection_count": np.random.randint(1, 30, n_proto),
-}
+if DIFFICULTY == "simple":
+    protocol_anomaly = {
+        "src_ip": random_ips(ATTACK_SUBNETS, n_proto),
+        "dst_ip": random_ips(DST_SUBNETS, n_proto),
+        "packet_rate": np.random.uniform(30, 3500, n_proto).round(1),
+        "unique_ports": np.random.randint(2, 200, n_proto),
+        "avg_packet_size": np.random.uniform(40, 600, n_proto).round(1),
+        "protocol": np.random.choice(["GRE", "ESP", "AH", "SCTP", "IGMP", "PIM"], n_proto),
+        "duration": np.random.uniform(0.3, 40, n_proto).round(1),
+        "connection_count": np.random.randint(1, 30, n_proto),
+    }
+else:  # realistic - Mix unusual protocols with subtle variations
+    protocol_anomaly = {
+        "src_ip": random_ips(ATTACK_SUBNETS, n_proto),
+        "dst_ip": random_ips(DST_SUBNETS, n_proto),
+        "packet_rate": np.random.uniform(15, 2000, n_proto).round(1),  # Lower range overlaps more
+        "unique_ports": np.random.randint(1, 120, n_proto),            # Some low port counts
+        "avg_packet_size": np.random.uniform(40, 800, n_proto).round(1),
+        "protocol": np.random.choice(["GRE", "ESP", "AH", "SCTP", "IGMP", "PIM"], n_proto),
+        "duration": np.random.uniform(0.3, 80, n_proto).round(1),
+        "connection_count": np.random.randint(1, 50, n_proto),         # Some overlap with normal
+    }
 
 # Attack 7: Brute Force — moderate rate, SINGLE port, MANY connections, short bursts
 # Key differentiator: very high connection_count with single port and short duration
 n_brute = 800
-brute_force = {
-    "src_ip": random_ips(ATTACK_SUBNETS, n_brute),
-    "dst_ip": random_ips(DST_SUBNETS, n_brute),
-    "packet_rate": np.random.uniform(80, 600, n_brute).round(1),
-    "unique_ports": np.ones(n_brute, dtype=int),
-    "avg_packet_size": np.random.uniform(60, 200, n_brute).round(1),
-    "protocol": np.full(n_brute, "TCP"),
-    "duration": np.random.uniform(0.2, 5, n_brute).round(1),
-    "connection_count": np.random.randint(50, 500, n_brute),  # KEY: massive connection count
-}
+if DIFFICULTY == "simple":
+    brute_force = {
+        "src_ip": random_ips(ATTACK_SUBNETS, n_brute),
+        "dst_ip": random_ips(DST_SUBNETS, n_brute),
+        "packet_rate": np.random.uniform(80, 600, n_brute).round(1),
+        "unique_ports": np.ones(n_brute, dtype=int),
+        "avg_packet_size": np.random.uniform(60, 200, n_brute).round(1),
+        "protocol": np.full(n_brute, "TCP"),
+        "duration": np.random.uniform(0.2, 5, n_brute).round(1),
+        "connection_count": np.random.randint(50, 500, n_brute),  # KEY: massive connection count
+    }
+else:  # realistic - LOW AND SLOW brute force
+    # Mix of aggressive and stealthy brute force
+    n_aggressive = n_brute // 2
+    n_stealthy = n_brute - n_aggressive
+    brute_force = {
+        "src_ip": random_ips(ATTACK_SUBNETS, n_brute),
+        "dst_ip": random_ips(DST_SUBNETS, n_brute),
+        "packet_rate": np.concatenate([
+            np.random.uniform(80, 600, n_aggressive),      # Aggressive brute force
+            np.random.uniform(10, 200, n_stealthy),        # Slow brute force (harder to detect)
+        ]).round(1),
+        "unique_ports": np.ones(n_brute, dtype=int),
+        "avg_packet_size": np.random.uniform(60, 250, n_brute).round(1),
+        "protocol": np.full(n_brute, "TCP"),
+        "duration": np.concatenate([
+            np.random.uniform(0.2, 8, n_aggressive),
+            np.random.uniform(5, 60, n_stealthy),          # Longer duration for slow attacks
+        ]).round(1),
+        "connection_count": np.concatenate([
+            np.random.randint(50, 400, n_aggressive),      # High connection count
+            np.random.randint(8, 50, n_stealthy),          # OVERLAP with normal! (Hard to detect)
+        ]),
+    }
 
 # Attack 8: ICMP Flood (Smurf) — high ICMP rate, fixed size, broadcast
 n_icmp_atk = 800
@@ -285,16 +376,28 @@ http_flood = {
 
 # Attack 10: Stealthy probe — low & slow, evading rate-based detection
 n_stealth = 800
-stealth_probe = {
-    "src_ip": random_ips(ATTACK_SUBNETS, n_stealth),
-    "dst_ip": random_ips(DST_SUBNETS, n_stealth),
-    "packet_rate": np.random.uniform(5, 80, n_stealth).round(1),
-    "unique_ports": np.random.randint(10, 150, n_stealth),
-    "avg_packet_size": np.random.uniform(40, 120, n_stealth).round(1),
-    "protocol": np.random.choice(["TCP", "UDP"], n_stealth, p=[0.7, 0.3]),
-    "duration": np.random.uniform(30, 600, n_stealth).round(1),
-    "connection_count": np.random.randint(5, 60, n_stealth),
-}
+if DIFFICULTY == "simple":
+    stealth_probe = {
+        "src_ip": random_ips(ATTACK_SUBNETS, n_stealth),
+        "dst_ip": random_ips(DST_SUBNETS, n_stealth),
+        "packet_rate": np.random.uniform(5, 80, n_stealth).round(1),
+        "unique_ports": np.random.randint(10, 150, n_stealth),
+        "avg_packet_size": np.random.uniform(40, 120, n_stealth).round(1),
+        "protocol": np.random.choice(["TCP", "UDP"], n_stealth, p=[0.7, 0.3]),
+        "duration": np.random.uniform(30, 600, n_stealth).round(1),
+        "connection_count": np.random.randint(5, 60, n_stealth),
+    }
+else:  # realistic - VERY stealthy, mimics normal traffic closely
+    stealth_probe = {
+        "src_ip": random_ips(ATTACK_SUBNETS, n_stealth),
+        "dst_ip": random_ips(DST_SUBNETS, n_stealth),
+        "packet_rate": np.random.uniform(3, 250, n_stealth).round(1),  # Wider range, overlaps normal
+        "unique_ports": np.random.randint(5, 100, n_stealth),          # Lower unique ports
+        "avg_packet_size": np.random.uniform(40, 600, n_stealth).round(1),  # More normal-looking
+        "protocol": np.random.choice(["TCP", "UDP"], n_stealth, p=[0.7, 0.3]),
+        "duration": np.random.uniform(10, 300, n_stealth).round(1),     # Shorter, less obvious
+        "connection_count": np.random.randint(2, 40, n_stealth),       # Overlaps normal range
+    }
 
 attack_df = pd.concat([
     pd.DataFrame(port_scan).assign(attack_type="port_scan"),
@@ -314,7 +417,7 @@ attack_df = pd.concat([
 #   SAVE CSVs
 # ═══════════════════════════════════════════════════════════════════════════
 
-data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", DIFFICULTY)
 os.makedirs(data_dir, exist_ok=True)
 
 normal_path = os.path.join(data_dir, "normal_traffic.csv")
@@ -324,7 +427,7 @@ normal_df.to_csv(normal_path, index=False)
 attack_df.to_csv(attack_path, index=False)
 
 print(f"{'=' * 60}")
-print(f"  Data Generation Complete")
+print(f"  Data Generation Complete ({DIFFICULTY.upper()} mode)")
 print(f"{'=' * 60}")
 print(f"\n  Normal traffic: {len(normal_df):,} rows -> {normal_path}")
 print(f"  Attack traffic: {len(attack_df):,} rows -> {attack_path}")

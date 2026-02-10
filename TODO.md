@@ -11,16 +11,18 @@
 
 | Component | Status | Key Metric |
 |---|---|---|
-| **ML Dataset** | ✅ Complete | 20,000 normal + 8,000 attack (28K total) |
-| **ML Model** | ✅ v3.0 | F1=0.9851, AUC=0.9991, FPR=1.0% |
-| **Ensemble** | ✅ IF+LOF | Weighted voting (65/35), all attacks ≥96.6% |
+| **ML Dataset** | ✅ Dual-Mode | Simple (98.5% F1) + Realistic (91.3% F1) |
+| **ML Model (Simple)** | ✅ v3.0 | F1=0.9851, AUC=0.9991, FPR=1.0% |
+| **ML Model (Realistic)** | ✅ v3.0 | F1=0.9131, AUC=0.9805, FPR=2.33% |
+| **Ensemble** | ✅ IF+LOF | Weighted voting (65/35), adaptive to difficulty |
 | **Rule IDS** | ✅ Enhanced | 6 detection rules, configurable thresholds |
 | **Fusion Engine** | ✅ Enhanced | Weighted scoring, alert deduplication |
 | **Backend API** | ✅ Enhanced | 12 endpoints, config/clear/stats |
 | **Frontend** | ✅ Redesigned | NOC aesthetic, 4 pages, motion animations |
-| **Visualizations** | ✅ Complete | 9 PNG plots in ml/plots/ |
-| **Training Logs** | ✅ Complete | ml/training.log |
-| **GitHub** | ✅ Pushed | All artifacts tracked (model, data, metrics, plots) |
+| **Visualizations** | ✅ Complete | 9 PNG plots per mode (18 total) |
+| **Training Logs** | ✅ Complete | Separate logs for each mode |
+| **Comparison** | ✅ Complete | COMPARISON.md - full analysis |
+| **GitHub** | ✅ Pushed | All artifacts tracked (models, data, metrics, plots) |
 
 ---
 
@@ -278,12 +280,85 @@ cd "CN Final Project"
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
-python ml/generate_data.py       # Generate dataset (28K rows)
-python ml/train_model.py         # Train model + generate plots (~70 seconds)
+
+# Generate dataset (choose difficulty)
+python ml/generate_data.py          # Simple mode (default, ~98% F1)
+python ml/generate_data.py realistic # Realistic mode (harder, ~91% F1)
+
+# Train model (choose difficulty)
+python ml/train_model.py            # Simple mode (~70 seconds)
+python ml/train_model.py realistic  # Realistic mode (~105 seconds)
+
+# Compare datasets
+python ml/compare_datasets.py       # Side-by-side analysis
+
+# Start backend
 uvicorn backend.main:app --port 8000
 
 # Frontend
 cd frontend
 npm install
-npm run dev                      # http://localhost:5173
+npm run dev                         # http://localhost:5173
 ```
+
+---
+
+## v3.0 UPDATE: Dual-Mode Datasets (Feb 10, 2026)
+
+### Background
+Initial v3.0 achieved **98.51% F1 score**, which raised concerns about being "too good to be true." 
+Data analysis revealed **91.5% of attacks** were easily detectable using a simple rule: `connection_count > 13`.
+
+### Solution: Dual-Mode Datasets
+Created **two difficulty modes** to balance learning demonstration vs real-world accuracy:
+
+#### **Simple Mode** (Original)
+- **Purpose:** Learning, proof of concept, demonstration
+- **Characteristics:**
+  - Normal connection_count: 1-19
+  - Attack connection_count: mostly 50-500
+  - 91.5% detectable by trivial threshold rule
+- **Results:** F1=0.9851, AUC=0.9991, FPR=1.0%
+- **All attacks:** ≥96.6% detection rate (brute force 100%)
+
+#### **Realistic Mode** (New)
+- **Purpose:** Production testing, real-world evaluation
+- **Characteristics:**
+  - Normal connection_count: 1-119 (added bulk operations, server tasks)
+  - Attack connection_count: 1-499 (50% brute force now stealthy 8-50 range)
+  - Only 68.4% easily detectable
+  - 72.2% of attacks overlap with normal ranges
+- **Results:** F1=0.9131, AUC=0.9805, FPR=2.33%
+- **Challenging attacks:** Brute force 49.6%, Stealth probe 76.4%
+
+### File Structure Changes
+```
+data/
+├── simple/          # Original dataset
+└── realistic/       # New challenging dataset
+
+ml/results/
+├── simple/          # Simple mode training results
+│   ├── model.pkl, ensemble_lof.pkl, scaler.pkl
+│   ├── training_metrics.json, TRAINING_REPORT.md
+│   └── plots/ (9 visualizations)
+└── realistic/       # Realistic mode training results
+    ├── model.pkl, ensemble_lof.pkl, scaler.pkl
+    ├── training_metrics.json, TRAINING_REPORT.md
+    └── plots/ (9 visualizations)
+
+COMPARISON.md        # Comprehensive side-by-side analysis
+```
+
+### Key Improvements
+- **Honest ML evaluation**: Both modes documented with transparent accuracy explanations
+- **Flexible usage**: Choose mode based on use case (learning vs production)
+- **Data generation script**: `python ml/generate_data.py [simple|realistic]`
+- **Training script**: `python ml/train_model.py [simple|realistic]`
+- **Comparison tool**: `python ml/compare_datasets.py` for analysis
+
+### Verdict
+- ✓ **Simple mode accuracy (98.5%) is legitimate** - pipeline works correctly
+- ✓ **BUT data is too clean** - explains unrealistic performance
+- ✓ **Realistic mode (91.3%) is production-ready** - genuinely challenging
+- ✓ **Both modes have value** - learning vs real-world testing
