@@ -160,3 +160,29 @@ def get_recent_traffic(limit: int = 50):
         "count": min(limit, len(traffic_store)),
         "records": traffic_store[-limit:][::-1],  # newest first
     }
+
+
+@router.post("/simulate")
+def simulate_traffic(mode: str = "random", count: int = 1):
+    """
+    Generate and ingest simulated traffic for demo purposes.
+    Modes: normal, port_scan, flood, anomaly, random
+    """
+    from backend.utils.traffic_simulator import generate_traffic
+
+    if count < 1 or count > 50:
+        raise HTTPException(status_code=400, detail="count must be between 1 and 50")
+
+    results = []
+    for _ in range(count):
+        traffic_data = generate_traffic(mode)
+        # Re-use the ingest logic
+        data = TrafficInput(**traffic_data)
+        result = ingest_traffic(data)
+        results.append(result)
+
+    return {
+        "simulated": count,
+        "mode": mode,
+        "results": results,
+    }
