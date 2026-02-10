@@ -1,98 +1,341 @@
 {
-  "training_samples": 5000,
-  "attack_samples": 1500,
-  "features": [
-    "packet_rate",
-    "unique_ports",
-    "avg_packet_size",
-    "duration",
-    "protocol_flag"
-  ],
-  "scaler_means": [
-    162.4853,
-    3.1066,
-    758.1724,
-    19.76018,
-    0.4754
-  ],
-  "scaler_stds": [
-    144.7484099322338,
-    2.001808292519541,
-    401.18038640272533,
-    18.93566498350665,
-    0.6389012756287156
-  ],
+  "training_timestamp": "2026-02-10 14:16:37",
+  "training_duration_seconds": 60.6,
+  "dataset": {
+    "normal_total": 20000,
+    "attack_total": 8000,
+    "normal_train": 14000,
+    "normal_val": 3000,
+    "normal_test": 3000,
+    "attack_val": 1200,
+    "attack_test": 1200
+  },
+  "features": {
+    "all": [
+      "packet_rate",
+      "unique_ports",
+      "avg_packet_size",
+      "duration",
+      "protocol_flag",
+      "bytes_per_second",
+      "port_scan_ratio",
+      "size_rate_ratio"
+    ],
+    "raw": [
+      "packet_rate",
+      "unique_ports",
+      "avg_packet_size",
+      "duration",
+      "protocol_flag"
+    ],
+    "derived": [
+      "bytes_per_second",
+      "port_scan_ratio",
+      "size_rate_ratio"
+    ],
+    "count": 8
+  },
+  "scaler": {
+    "means": [
+      227.63810714285722,
+      3.725857142857143,
+      709.2179999999997,
+      29.647192857142784,
+      0.5022142857142857,
+      195221.80280714293,
+      0.6574088214285708,
+      7.766053542857194
+    ],
+    "stds": [
+      264.0893157518376,
+      3.4504641480147065,
+      434.22744889582077,
+      39.72607320287181,
+      0.6430913819281809,
+      265205.15510249685,
+      1.6700768408442623,
+      10.950689703846065
+    ]
+  },
+  "best_hyperparameters": {
+    "n_estimators": 300,
+    "contamination": 0.01,
+    "max_features": 0.75,
+    "max_samples": 0.75
+  },
+  "hyperparameter_search": {
+    "total_combinations": 81,
+    "top_5": [
+      {
+        "n_estimators": 300,
+        "contamination": 0.01,
+        "max_features": 0.75,
+        "max_samples": "0.75",
+        "f1": 0.9012,
+        "recall": 0.8442,
+        "fpr": 0.0117
+      },
+      {
+        "n_estimators": 300,
+        "contamination": 0.03,
+        "max_features": 0.5,
+        "max_samples": "0.75",
+        "f1": 0.9012,
+        "recall": 0.8775,
+        "fpr": 0.028
+      },
+      {
+        "n_estimators": 300,
+        "contamination": 0.01,
+        "max_features": 0.5,
+        "max_samples": "0.75",
+        "f1": 0.9008,
+        "recall": 0.84,
+        "fpr": 0.01
+      },
+      {
+        "n_estimators": 200,
+        "contamination": 0.01,
+        "max_features": 0.5,
+        "max_samples": "0.75",
+        "f1": 0.9004,
+        "recall": 0.84,
+        "fpr": 0.0103
+      },
+      {
+        "n_estimators": 100,
+        "contamination": 0.01,
+        "max_features": 1.0,
+        "max_samples": "0.75",
+        "f1": 0.8997,
+        "recall": 0.8375,
+        "fpr": 0.0097
+      }
+    ]
+  },
   "cross_validation": {
-    "avg_fp_rate": 0.0292,
-    "std_fp_rate": 0.0054
+    "avg_fp_rate": 0.0115,
+    "std_fp_rate": 0.0023,
+    "fold_fp_rates": [
+      0.0146,
+      0.0093,
+      0.0118,
+      0.0086,
+      0.0132
+    ]
   },
   "model_metrics": {
     "isolation_forest": {
-      "model": "Isolation Forest",
-      "precision": 0.9069,
-      "recall": 0.974,
-      "f1_score": 0.9392,
-      "roc_auc": 0.9923,
-      "normal_accuracy": 0.97,
-      "attack_detection_rate": 0.974,
-      "false_positive_rate": 0.03,
+      "model": "Isolation Forest (tuned)",
+      "precision": 0.9594,
+      "recall": 0.8658,
+      "f1_score": 0.9102,
+      "roc_auc": 0.9626,
+      "normal_accuracy": 0.9853,
+      "attack_detection_rate": 0.8658,
+      "false_positive_rate": 0.0147,
       "confusion_matrix": [
         [
-          4850,
-          150
+          2956,
+          44
         ],
         [
-          39,
-          1461
+          161,
+          1039
         ]
-      ]
+      ],
+      "per_attack_type": {
+        "brute_force": {
+          "detected": 0,
+          "total": 115,
+          "rate": 0.0
+        },
+        "dns_amplification": {
+          "detected": 134,
+          "total": 135,
+          "rate": 0.9926
+        },
+        "http_flood": {
+          "detected": 112,
+          "total": 128,
+          "rate": 0.875
+        },
+        "icmp_flood": {
+          "detected": 97,
+          "total": 97,
+          "rate": 1.0
+        },
+        "port_scan": {
+          "detected": 127,
+          "total": 127,
+          "rate": 1.0
+        },
+        "protocol_anomaly": {
+          "detected": 116,
+          "total": 117,
+          "rate": 0.9915
+        },
+        "slowloris": {
+          "detected": 87,
+          "total": 105,
+          "rate": 0.8286
+        },
+        "stealth_probe": {
+          "detected": 138,
+          "total": 140,
+          "rate": 0.9857
+        },
+        "syn_flood": {
+          "detected": 122,
+          "total": 125,
+          "rate": 0.976
+        },
+        "udp_flood": {
+          "detected": 106,
+          "total": 111,
+          "rate": 0.955
+        }
+      }
     },
     "one_class_svm": {
       "model": "One-Class SVM",
-      "precision": 0.8581,
-      "recall": 1.0,
-      "f1_score": 0.9236,
-      "roc_auc": 1.0,
-      "normal_accuracy": 0.9504,
-      "attack_detection_rate": 1.0,
-      "false_positive_rate": 0.0496,
+      "precision": 0.8668,
+      "recall": 0.895,
+      "f1_score": 0.8807,
+      "roc_auc": 0.9818,
+      "normal_accuracy": 0.945,
+      "attack_detection_rate": 0.895,
+      "false_positive_rate": 0.055,
       "confusion_matrix": [
         [
-          4752,
-          248
+          2835,
+          165
         ],
         [
-          0,
-          1500
+          126,
+          1074
         ]
       ]
     },
     "local_outlier_factor": {
       "model": "Local Outlier Factor",
-      "precision": 0.8711,
-      "recall": 1.0,
-      "f1_score": 0.9311,
-      "roc_auc": 0.9999,
-      "normal_accuracy": 0.9556,
-      "attack_detection_rate": 1.0,
-      "false_positive_rate": 0.0444,
+      "precision": 0.8868,
+      "recall": 0.9008,
+      "f1_score": 0.8938,
+      "roc_auc": 0.9794,
+      "normal_accuracy": 0.954,
+      "attack_detection_rate": 0.9008,
+      "false_positive_rate": 0.046,
       "confusion_matrix": [
         [
-          4778,
-          222
+          2862,
+          138
         ],
         [
-          0,
-          1500
+          119,
+          1081
         ]
       ]
     }
   },
+  "learning_curve": [
+    {
+      "fraction": 0.1,
+      "n_samples": 1400,
+      "train_fpr": 0.01,
+      "test_f1": 0.7759,
+      "test_fpr": 0.0097,
+      "test_recall": 0.6492
+    },
+    {
+      "fraction": 0.2,
+      "n_samples": 2800,
+      "train_fpr": 0.01,
+      "test_f1": 0.873,
+      "test_fpr": 0.0127,
+      "test_recall": 0.7992
+    },
+    {
+      "fraction": 0.3,
+      "n_samples": 4200,
+      "train_fpr": 0.01,
+      "test_f1": 0.8918,
+      "test_fpr": 0.0147,
+      "test_recall": 0.8342
+    },
+    {
+      "fraction": 0.5,
+      "n_samples": 7000,
+      "train_fpr": 0.01,
+      "test_f1": 0.9053,
+      "test_fpr": 0.0123,
+      "test_recall": 0.8525
+    },
+    {
+      "fraction": 0.7,
+      "n_samples": 9800,
+      "train_fpr": 0.01,
+      "test_f1": 0.9089,
+      "test_fpr": 0.0133,
+      "test_recall": 0.8608
+    },
+    {
+      "fraction": 0.85,
+      "n_samples": 11900,
+      "train_fpr": 0.01,
+      "test_f1": 0.9128,
+      "test_fpr": 0.0137,
+      "test_recall": 0.8683
+    },
+    {
+      "fraction": 1.0,
+      "n_samples": 14000,
+      "train_fpr": 0.01,
+      "test_f1": 0.9102,
+      "test_fpr": 0.0147,
+      "test_recall": 0.8658
+    }
+  ],
   "feature_importance": {
-    "packet_rate": 0.2274,
-    "unique_ports": 0.128,
-    "avg_packet_size": 0.2797,
-    "duration": 0.2012,
-    "protocol_flag": 0.1638
+    "bytes_per_second": {
+      "mean": 0.023217,
+      "std": 0.000421,
+      "relative": 21.58
+    },
+    "avg_packet_size": {
+      "mean": 0.019338,
+      "std": 0.000184,
+      "relative": 17.98
+    },
+    "packet_rate": {
+      "mean": 0.01921,
+      "std": 0.000209,
+      "relative": 17.86
+    },
+    "size_rate_ratio": {
+      "mean": 0.011092,
+      "std": 0.00018,
+      "relative": 10.31
+    },
+    "duration": {
+      "mean": 0.009791,
+      "std": 0.000163,
+      "relative": 9.1
+    },
+    "unique_ports": {
+      "mean": 0.009477,
+      "std": 0.000168,
+      "relative": 8.81
+    },
+    "port_scan_ratio": {
+      "mean": 0.008904,
+      "std": 0.000107,
+      "relative": 8.28
+    },
+    "protocol_flag": {
+      "mean": 0.006554,
+      "std": 0.000192,
+      "relative": 6.09
+    }
   }
 }

@@ -1,7 +1,7 @@
 """
 ML Model Inference Module
 Loads the trained Isolation Forest model + scaler and provides prediction functions.
-Uses StandardScaler for feature normalization matching training pipeline.
+Uses StandardScaler + derived features matching the training pipeline.
 """
 
 import os
@@ -44,14 +44,32 @@ def load_model():
 
 
 def prepare_features(traffic: dict) -> np.ndarray:
-    """Convert traffic record to feature vector matching training format."""
+    """Convert traffic record to feature vector matching training format.
+    Must produce the same 8 features in the same order as training:
+    [packet_rate, unique_ports, avg_packet_size, duration, protocol_flag,
+     bytes_per_second, port_scan_ratio, size_rate_ratio]
+    """
     protocol_flag = PROTOCOL_MAP.get(traffic.get("protocol", "").upper(), 3)
+
+    packet_rate = float(traffic["packet_rate"])
+    unique_ports = float(traffic["unique_ports"])
+    avg_packet_size = float(traffic["avg_packet_size"])
+    duration = float(traffic["duration"])
+
+    # Derived features (must match add_derived_features in train_model.py)
+    bytes_per_second = packet_rate * avg_packet_size
+    port_scan_ratio = unique_ports / max(duration, 0.1)
+    size_rate_ratio = avg_packet_size / max(packet_rate, 0.1)
+
     features = np.array([
-        traffic["packet_rate"],
-        traffic["unique_ports"],
-        traffic["avg_packet_size"],
-        traffic["duration"],
+        packet_rate,
+        unique_ports,
+        avg_packet_size,
+        duration,
         protocol_flag,
+        bytes_per_second,
+        port_scan_ratio,
+        size_rate_ratio,
     ]).reshape(1, -1)
     return features
 
@@ -90,18 +108,14 @@ def predict(traffic: dict) -> dict:
     is_anomaly = prediction == -1
 
     # Calibrated confidence based on anomaly score distribution
-    # Typical decision_function range is roughly [-0.5, 0.5]
-    # Map to [0, 1] where higher = more confident it's anomalous
     if is_anomaly:
-        # For anomalies: more negative score = higher confidence
         confidence = min(1.0, max(0.3, 0.5 + abs(anomaly_score) * 2.0))
     else:
-        # For normal: more positive score = higher confidence it's normal
         confidence = min(1.0, max(0.0, anomaly_score * 1.5))
 
     return {
         "anomaly": bool(is_anomaly),
         "score": round(float(anomaly_score), 4),
         "confidence": round(float(confidence), 4),
-        "status": "ok",
+        "status": "anomaly_detected" if is_anomaly else "normal",
     }

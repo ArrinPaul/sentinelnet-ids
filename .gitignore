@@ -11,8 +11,9 @@ venv/
 env/
 .env
 
-# ML Model artifacts
-ml/model.pkl
+# ML Model artifacts — KEPT IN REPO for reproducibility
+# ml/model.pkl  ← intentionally tracked
+# ml/scaler.pkl ← intentionally tracked
 
 # Node
 node_modules/
