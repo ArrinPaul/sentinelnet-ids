@@ -75,7 +75,13 @@ os.makedirs(PLOTS_DIR, exist_ok=True)
 
 # ── Feature columns used for training ───────────────────────────────────────
 RAW_FEATURES = ["packet_rate", "unique_ports", "avg_packet_size", "duration", "protocol_flag", "connection_count"]
-DERIVED_FEATURES = ["bytes_per_second", "port_scan_ratio", "size_rate_ratio", "conn_rate"]
+DERIVED_FEATURES = [
+    # v3.0 features
+    "bytes_per_second", "port_scan_ratio", "size_rate_ratio", "conn_rate",
+    # v3.1 enhanced features (realistic mode optimization)
+    "burst_intensity", "traffic_efficiency", "port_diversity", "connection_density",
+    "size_deviation", "duration_efficiency", "rate_concentration"
+]
 FEATURE_COLS = RAW_FEATURES + DERIVED_FEATURES
 
 # ── Matplotlib style ─────────────────────────────────────────────────────────
