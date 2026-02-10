@@ -1,22 +1,105 @@
 @import "tailwindcss";
 
-/* Custom base styles */
+/* ═══════════════════════════════════════════════════════════
+   NetShield IDS — Command Center Aesthetic
+   Typography: Outfit (display) + JetBrains Mono (data/code)
+   Palette: Deep midnight blues + electric teal accents
+   ═══════════════════════════════════════════════════════════ */
+
+@theme {
+  --color-midnight: #060b18;
+  --color-panel: #0a1628;
+  --color-panel-light: #0f1d35;
+  --color-panel-border: #162040;
+  --color-panel-hover: #13253f;
+  --color-text-primary: #e8edf5;
+  --color-text-secondary: #7a8ba8;
+  --color-text-muted: #4a5b78;
+  --color-accent: #00e5a0;
+  --color-accent-dim: #00e5a033;
+  --color-accent-glow: #00e5a066;
+  --color-danger: #ff3b5c;
+  --color-danger-dim: #ff3b5c22;
+  --color-warning: #ffb020;
+  --color-warning-dim: #ffb02022;
+  --color-info: #38a0ff;
+  --color-info-dim: #38a0ff22;
+  --color-purple: #a855f7;
+  --color-purple-dim: #a855f722;
+}
+
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Outfit', system-ui, sans-serif;
+  background: var(--color-midnight);
+  color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Severity color utilities */
-.severity-critical { color: #ef4444; }
-.severity-high { color: #f97316; }
-.severity-medium { color: #eab308; }
-.severity-low { color: #3b82f6; }
-.severity-safe { color: #22c55e; }
+/* Monospace for data values */
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
 
-.bg-severity-critical { background-color: #ef4444; }
-.bg-severity-high { background-color: #f97316; }
-.bg-severity-medium { background-color: #eab308; }
-.bg-severity-low { background-color: #3b82f6; }
-.bg-severity-safe { background-color: #22c55e; }
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-panel-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+
+/* Glow effects */
+.glow-accent {
+  box-shadow: 0 0 20px var(--color-accent-dim), 0 0 60px var(--color-accent-dim);
+}
+.glow-danger {
+  box-shadow: 0 0 20px var(--color-danger-dim), 0 0 60px var(--color-danger-dim);
+}
+
+/* Grid line pattern for backgrounds */
+.grid-pattern {
+  background-image:
+    linear-gradient(var(--color-panel-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-panel-border) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center center;
+}
+
+/* Scan line animation */
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+.scanline::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(transparent, var(--color-accent-dim), transparent);
+  height: 4px;
+  animation: scanline 4s linear infinite;
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+/* Pulse ring for status indicators */
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+/* Severity indicators */
+.severity-critical { color: var(--color-danger); }
+.severity-high { color: var(--color-warning); }
+.severity-medium { color: #e5c040; }
+.severity-low { color: var(--color-info); }
+.severity-safe { color: var(--color-accent); }

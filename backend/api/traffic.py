@@ -116,8 +116,8 @@ def ingest_traffic(data: TrafficInput):
     ml_result = ml_analyze(record)
     fusion_result = fuse(rule_result, ml_result, record)
 
-    # If intrusion detected, generate policies and store alert
-    if fusion_result["intrusion_detected"]:
+    # If intrusion detected and not a duplicate, generate policies and store alert
+    if fusion_result["intrusion_detected"] and not fusion_result.get("duplicate", False):
         alert_entry = {
             **fusion_result,
             "src_ip": data.src_ip,
@@ -140,7 +140,7 @@ def ingest_traffic(data: TrafficInput):
         policy_store.append(policy_entry)
 
         logger.warning(
-            f"🚨 INTRUSION DETECTED: {fusion_result['severity']} — "
+            f"INTRUSION DETECTED: {fusion_result['severity']} — "
             f"{fusion_result['attack_type']} from {data.src_ip}"
         )
 

@@ -13,17 +13,19 @@ function App() {
 
   return (
     <Router>
-      <div className="flex h-screen bg-gray-950 text-gray-100 overflow-hidden">
+      <div className="flex h-screen overflow-hidden" style={{ background: 'var(--color-midnight)' }}>
         <Sidebar open={sidebarOpen} setOpen={setSidebarOpen} />
         <div className="flex flex-col flex-1 overflow-hidden">
           <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-          <main className="flex-1 overflow-y-auto p-6 bg-gray-950">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/traffic" element={<Traffic />} />
-              <Route path="/alerts" element={<Alerts />} />
-              <Route path="/policies" element={<Policies />} />
-            </Routes>
+          <main className="flex-1 overflow-y-auto">
+            <div className="p-6 max-w-[1600px] mx-auto">
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/traffic" element={<Traffic />} />
+                <Route path="/alerts" element={<Alerts />} />
+                <Route path="/policies" element={<Policies />} />
+              </Routes>
+            </div>
           </main>
         </div>
       </div>

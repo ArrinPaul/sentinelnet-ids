@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react';
-import { ShieldAlert, Filter } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ShieldAlert, Filter, Trash2 } from 'lucide-react';
 import AlertTable from '../components/AlertTable';
-import { getAlertHistory } from '../services/api';
+import Panel, { PanelHeader } from '../components/Panel';
+import { getAlerts, clearSystem } from '../services/api';
+
+const SEVERITY_FILTERS = ['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
+const severityTheme = {
+  CRITICAL: { color: '#ff3b5c', bg: 'rgba(255,59,92,0.12)', border: 'rgba(255,59,92,0.25)' },
+  HIGH:     { color: '#ff6b35', bg: 'rgba(255,107,53,0.12)', border: 'rgba(255,107,53,0.25)' },
+  MEDIUM:   { color: '#ffb020', bg: 'rgba(255,176,32,0.12)', border: 'rgba(255,176,32,0.25)' },
+  LOW:      { color: '#38a0ff', bg: 'rgba(56,160,255,0.12)', border: 'rgba(56,160,255,0.25)' },
+};
 
 export default function Alerts() {
   const [alerts, setAlerts] = useState([]);
@@ -10,10 +20,10 @@ export default function Alerts() {
 
   const fetchData = async () => {
     try {
-      const { data } = await getAlertHistory(100);
+      const { data } = await getAlerts(100);
       setAlerts(data.alerts || []);
     } catch (err) {
-      console.error('Alert fetch error:', err);
+      console.error('Alerts fetch error:', err);
     } finally {
       setLoading(false);
     }
@@ -25,13 +35,26 @@ export default function Alerts() {
     return () => clearInterval(interval);
   }, []);
 
-  const filteredAlerts =
-    filter === 'ALL' ? alerts : alerts.filter((a) => a.severity === filter);
+  const handleClear = async () => {
+    try {
+      await clearSystem();
+      setAlerts([]);
+    } catch (err) {
+      console.error('Clear error:', err);
+    }
+  };
+
+  const filtered = filter === 'ALL' ? alerts : alerts.filter((a) => a.severity === filter);
+
+  const severityCounts = alerts.reduce((acc, a) => {
+    acc[a.severity] = (acc[a.severity] || 0) + 1;
+    return acc;
+  }, {});
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
+      <div className="flex items-center justify-center h-[60vh]">
+        <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Loading alerts...</p>
       </div>
     );
   }
@@ -39,72 +62,102 @@ export default function Alerts() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+      >
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Intrusion Alerts</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {alerts.length} total alerts detected
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
+            Security Alerts
+          </h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
+            <span className="font-mono">{alerts.length}</span> total alerts —{' '}
+            <span className="font-mono">{filtered.length}</span> shown
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-gray-500" />
-          {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((level) => (
-            <button
-              key={level}
-              onClick={() => setFilter(level)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
-                filter === level
-                  ? level === 'CRITICAL'
-                    ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                    : level === 'HIGH'
-                    ? 'bg-orange-500/20 text-orange-400 border-orange-500/30'
-                    : level === 'MEDIUM'
-                    ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                    : level === 'LOW'
-                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                    : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                  : 'bg-gray-800/50 text-gray-400 border-gray-700 hover:border-gray-600'
-              }`}
-            >
-              {level}
-            </button>
-          ))}
-        </div>
-      </div>
+        <button
+          onClick={handleClear}
+          className="flex items-center gap-2 px-3 py-2 text-[11px] font-semibold rounded-lg transition-all cursor-pointer"
+          style={{
+            background: 'rgba(255,59,92,0.08)',
+            color: 'var(--color-danger)',
+            border: '1px solid rgba(255,59,92,0.15)',
+          }}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+          Clear All
+        </button>
+      </motion.div>
 
-      {/* Alert Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((sev) => {
-          const count = alerts.filter((a) => a.severity === sev).length;
-          const colors = {
-            CRITICAL: 'border-red-500/20 bg-red-500/5 text-red-400',
-            HIGH: 'border-orange-500/20 bg-orange-500/5 text-orange-400',
-            MEDIUM: 'border-amber-500/20 bg-amber-500/5 text-amber-400',
-            LOW: 'border-blue-500/20 bg-blue-500/5 text-blue-400',
-          };
+      {/* Severity Summary Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {Object.entries(severityTheme).map(([sev, theme], i) => {
+          const count = severityCounts[sev] || 0;
           return (
-            <div
+            <motion.button
               key={sev}
-              className={`p-4 rounded-xl border ${colors[sev]} cursor-pointer hover:scale-[1.02] transition-transform`}
-              onClick={() => setFilter(sev)}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 * i }}
+              onClick={() => setFilter(filter === sev ? 'ALL' : sev)}
+              className="rounded-xl p-4 text-left transition-all cursor-pointer"
+              style={{
+                background: filter === sev ? theme.bg : 'var(--color-panel)',
+                border: `1px solid ${filter === sev ? theme.border : 'var(--color-panel-border)'}`,
+              }}
             >
-              <p className="text-3xl font-bold">{count}</p>
-              <p className="text-xs uppercase tracking-wider opacity-70 mt-1">{sev}</p>
-            </div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: theme.color }}>
+                  {sev}
+                </span>
+                {filter === sev && (
+                  <motion.div layoutId="sev-active" className="w-1.5 h-1.5 rounded-full" style={{ background: theme.color }} />
+                )}
+              </div>
+              <p className="text-xl font-bold font-mono" style={{ color: count > 0 ? theme.color : 'var(--color-text-muted)' }}>
+                {count}
+              </p>
+            </motion.button>
           );
         })}
       </div>
 
-      {/* Alert Table */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xs uppercase tracking-widest text-gray-400 font-semibold">
-            <ShieldAlert className="w-4 h-4 inline mr-2" />
-            Alert Log ({filteredAlerts.length} shown)
-          </h3>
+      {/* Filter Bar */}
+      <Panel delay={0.15}>
+        <div className="flex items-center gap-3 flex-wrap">
+          <Filter className="w-4 h-4" style={{ color: 'var(--color-text-muted)' }} />
+          {SEVERITY_FILTERS.map((sev) => {
+            const isActive = filter === sev;
+            const theme = severityTheme[sev];
+            return (
+              <button
+                key={sev}
+                onClick={() => setFilter(sev)}
+                className="px-3 py-1.5 rounded-md text-[10px] uppercase tracking-[0.1em] font-bold transition-all cursor-pointer"
+                style={{
+                  background: isActive ? (theme ? theme.bg : 'var(--color-accent-dim)') : 'transparent',
+                  color: isActive ? (theme ? theme.color : 'var(--color-accent)') : 'var(--color-text-muted)',
+                  border: `1px solid ${isActive ? (theme ? theme.border : 'rgba(0,229,160,0.2)') : 'transparent'}`,
+                }}
+              >
+                {sev}
+              </button>
+            );
+          })}
+          <span className="ml-auto text-[10px] font-mono" style={{ color: 'var(--color-text-muted)' }}>
+            {filtered.length} result{filtered.length !== 1 ? 's' : ''}
+          </span>
         </div>
-        <AlertTable alerts={filteredAlerts} />
-      </div>
+      </Panel>
+
+      {/* Alert Table */}
+      <Panel delay={0.2} noPad>
+        <div className="p-5 pb-0">
+          <PanelHeader icon={ShieldAlert} title="Alert Log" />
+        </div>
+        <AlertTable alerts={filtered} />
+      </Panel>
     </div>
   );
 }

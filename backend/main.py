@@ -92,6 +92,20 @@ def system_stats():
     else:
         security_mode = "SAFE"
 
+    # Attack type breakdown
+    attack_type_counts = {}
+    for a in alert_store:
+        atype = a.get("attack_type", "Unknown")
+        if atype:
+            attack_type_counts[atype] = attack_type_counts.get(atype, 0) + 1
+
+    # Top offending IPs
+    ip_counts = {}
+    for a in alert_store:
+        ip = a.get("src_ip", "unknown")
+        ip_counts[ip] = ip_counts.get(ip, 0) + 1
+    top_ips = sorted(ip_counts.items(), key=lambda x: -x[1])[:5]
+
     return {
         "total_traffic": total_traffic,
         "avg_packet_rate": avg_packet_rate,
@@ -100,7 +114,39 @@ def system_stats():
         "severity_breakdown": severity_counts,
         "security_mode": security_mode,
         "total_policies": len(policy_store),
+        "attack_type_breakdown": attack_type_counts,
+        "top_offending_ips": [{"ip": ip, "count": c} for ip, c in top_ips],
     }
+
+
+@app.get("/system/config")
+def get_config():
+    """Return current IDS threshold configuration."""
+    from backend.ids.rule_ids import get_thresholds
+    return {"thresholds": get_thresholds()}
+
+
+@app.put("/system/config")
+def update_config(new_thresholds: dict):
+    """Update IDS thresholds."""
+    from backend.ids.rule_ids import update_thresholds
+    updated = update_thresholds(new_thresholds)
+    return {"status": "updated", "thresholds": updated}
+
+
+@app.post("/system/clear")
+def clear_all_data():
+    """Clear all in-memory data stores (for demo reset)."""
+    from backend.api.traffic import traffic_store
+    from backend.api.detection import alert_store
+    from backend.api.policies import policy_store
+
+    traffic_store.clear()
+    alert_store.clear()
+    policy_store.clear()
+
+    logger.info("All data stores cleared (demo reset)")
+    return {"status": "cleared", "message": "All traffic, alerts, and policies cleared"}
 
 
 @app.get("/")

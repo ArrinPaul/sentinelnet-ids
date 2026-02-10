@@ -1,6 +1,7 @@
 """
 ML Model Inference Module
-Loads the trained Isolation Forest model and provides prediction functions.
+Loads the trained Isolation Forest model + scaler and provides prediction functions.
+Uses StandardScaler for feature normalization matching training pipeline.
 """
 
 import os
@@ -11,24 +12,35 @@ import logging
 logger = logging.getLogger("network-ids.ml-inference")
 
 # ── Paths ────────────────────────────────────────────────────────────────────
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "model.pkl")
+ML_DIR = os.path.dirname(__file__)
+MODEL_PATH = os.path.join(ML_DIR, "model.pkl")
+SCALER_PATH = os.path.join(ML_DIR, "scaler.pkl")
 
 # ── Protocol encoding (must match training) ──────────────────────────────────
 PROTOCOL_MAP = {"TCP": 0, "UDP": 1, "ICMP": 2}
 
-# ── Global model instance ───────────────────────────────────────────────────
+# ── Global instances ─────────────────────────────────────────────────────────
 _model = None
+_scaler = None
 
 
 def load_model():
-    """Load the trained model from disk."""
-    global _model
+    """Load the trained model and scaler from disk."""
+    global _model, _scaler
+
     if os.path.exists(MODEL_PATH):
         _model = joblib.load(MODEL_PATH)
         logger.info(f"ML model loaded from {MODEL_PATH}")
     else:
         logger.warning(f"ML model not found at {MODEL_PATH}. ML IDS will be disabled.")
         _model = None
+
+    if os.path.exists(SCALER_PATH):
+        _scaler = joblib.load(SCALER_PATH)
+        logger.info(f"Scaler loaded from {SCALER_PATH}")
+    else:
+        logger.warning(f"Scaler not found at {SCALER_PATH}. Features will not be scaled.")
+        _scaler = None
 
 
 def prepare_features(traffic: dict) -> np.ndarray:
@@ -47,9 +59,11 @@ def prepare_features(traffic: dict) -> np.ndarray:
 def predict(traffic: dict) -> dict:
     """
     Run anomaly detection on a traffic record.
-    Returns: {anomaly: bool, score: float, confidence: float}
+
+    Returns:
+        dict with: anomaly (bool), score (float), confidence (float), status (str)
     """
-    global _model
+    global _model, _scaler
 
     if _model is None:
         load_model()
@@ -64,6 +78,10 @@ def predict(traffic: dict) -> dict:
 
     features = prepare_features(traffic)
 
+    # Apply scaler if available (matches training pipeline)
+    if _scaler is not None:
+        features = _scaler.transform(features)
+
     # Isolation Forest: predict returns 1 (normal) or -1 (anomaly)
     prediction = _model.predict(features)[0]
     # decision_function: negative = more anomalous, positive = more normal
@@ -71,8 +89,15 @@ def predict(traffic: dict) -> dict:
 
     is_anomaly = prediction == -1
 
-    # Convert score to 0-1 confidence (lower decision score = higher anomaly confidence)
-    confidence = max(0.0, min(1.0, 0.5 - anomaly_score))
+    # Calibrated confidence based on anomaly score distribution
+    # Typical decision_function range is roughly [-0.5, 0.5]
+    # Map to [0, 1] where higher = more confident it's anomalous
+    if is_anomaly:
+        # For anomalies: more negative score = higher confidence
+        confidence = min(1.0, max(0.3, 0.5 + abs(anomaly_score) * 2.0))
+    else:
+        # For normal: more positive score = higher confidence it's normal
+        confidence = min(1.0, max(0.0, anomaly_score * 1.5))
 
     return {
         "anomaly": bool(is_anomaly),

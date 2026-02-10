@@ -25,8 +25,14 @@ export const getCurrentAlerts = () =>
 export const getAlertHistory = (limit = 100) =>
   api.get(`/alerts/history?limit=${limit}`);
 
+export const getAlerts = (limit = 100) =>
+  api.get(`/alerts/history?limit=${limit}`);
+
 // ── Policies ────────────────────────────────────────────────────────────────
 export const getGeneratedPolicies = (limit = 50) =>
+  api.get(`/policies/generated?limit=${limit}`);
+
+export const getPolicies = (limit = 50) =>
   api.get(`/policies/generated?limit=${limit}`);
 
 export const getLatestPolicy = () =>
@@ -38,5 +44,14 @@ export const getSystemStatus = () =>
 
 export const getSystemStats = () =>
   api.get('/system/stats');
+
+export const getSystemConfig = () =>
+  api.get('/system/config');
+
+export const updateSystemConfig = (config) =>
+  api.put('/system/config', config);
+
+export const clearSystem = () =>
+  api.post('/system/clear');
 
 export default api;
