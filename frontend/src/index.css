@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+/* Custom base styles */
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Severity color utilities */
+.severity-critical { color: #ef4444; }
+.severity-high { color: #f97316; }
+.severity-medium { color: #eab308; }
+.severity-low { color: #3b82f6; }
+.severity-safe { color: #22c55e; }
+
+.bg-severity-critical { background-color: #ef4444; }
+.bg-severity-high { background-color: #f97316; }
+.bg-severity-medium { background-color: #eab308; }
+.bg-severity-low { background-color: #3b82f6; }
+.bg-severity-safe { background-color: #22c55e; }
