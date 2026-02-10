@@ -12,12 +12,15 @@
 | Component | Status | Key Metric |
 |---|---|---|
 | **ML Dataset** | ✅ Complete | 20,000 normal + 8,000 attack (28K total) |
-| **ML Model** | ✅ Trained | F1=0.9102, AUC=0.9626, FPR=1.47% |
+| **ML Model** | ✅ v3.0 | F1=0.9851, AUC=0.9991, FPR=1.0% |
+| **Ensemble** | ✅ IF+LOF | Weighted voting (65/35), all attacks ≥96.6% |
 | **Rule IDS** | ✅ Enhanced | 6 detection rules, configurable thresholds |
 | **Fusion Engine** | ✅ Enhanced | Weighted scoring, alert deduplication |
 | **Backend API** | ✅ Enhanced | 12 endpoints, config/clear/stats |
 | **Frontend** | ✅ Redesigned | NOC aesthetic, 4 pages, motion animations |
-| **GitHub** | ✅ Pushed | All artifacts tracked (model, data, metrics) |
+| **Visualizations** | ✅ Complete | 9 PNG plots in ml/plots/ |
+| **Training Logs** | ✅ Complete | ml/training.log |
+| **GitHub** | ✅ Pushed | All artifacts tracked (model, data, metrics, plots) |
 
 ---
 
@@ -42,6 +45,7 @@
 - [x] In-memory traffic store with max capacity
 - [x] `GET /traffic/recent` — return last N records
 - [x] Logging for ingested traffic
+- [x] `connection_count` field added to traffic model
 
 ---
 
@@ -61,7 +65,7 @@
 
 ## PHASE 4: ML-Based Anomaly Detection ✅
 
-### Dataset (v2.0 — Anti-Overfitting)
+### Dataset (v3.0 — Anti-Overfitting)
 - [x] **20,000 normal rows** across 7 traffic profiles
   - Web browsing (45%), Streaming (18%), DNS (12%), ICMP (5%)
   - **Edge cases (10%)** — borderline traffic that looks suspicious but is legitimate
@@ -69,46 +73,63 @@
 - [x] **8,000 attack rows** across 10 subtypes (800 each)
   - Port Scan, SYN Flood, UDP Flood, Slowloris, DNS Amplification
   - Protocol Anomaly, Brute Force, ICMP Flood, HTTP Flood, Stealthy Probe
+- [x] **connection_count** feature added — differentiates brute force attacks
 - [x] Datasets saved as CSV and tracked in git (`data/`)
 
-### Training Pipeline (v2.0)
-- [x] **8 features**: 5 raw + 3 derived (`bytes_per_second`, `port_scan_ratio`, `size_rate_ratio`)
+### Training Pipeline (v3.0 — Ensemble + Visualizations)
+- [x] **10 features**: 6 raw + 4 derived (`bytes_per_second`, `port_scan_ratio`, `size_rate_ratio`, `conn_rate`)
 - [x] **StandardScaler** fitted on training data only (saved to `ml/scaler.pkl`)
 - [x] **Proper train/validation/test split** — 70/15/15 (14K train, 3K val, 3K test)
 - [x] **Hyperparameter grid search** — 81 combinations on validation set
-  - Best: `n_estimators=300, contamination=0.01, max_features=0.75, max_samples=0.75`
-- [x] **5-fold cross-validation** — FPR: 0.0115 ± 0.0023
-- [x] **Learning curve analysis** — F1 improves monotonically (no overfitting)
+  - Best: `n_estimators=100, contamination=0.01, max_features=0.75, max_samples=0.5`
+- [x] **5-fold cross-validation** — FPR: 0.0108 ± 0.0024
+- [x] **Learning curve analysis** — F1 stable/improving, no overfitting (train-test gap=0.0)
 - [x] **Feature importance** with confidence intervals (10 permutation repeats)
-- [x] **Model comparison**: Isolation Forest vs One-Class SVM vs LOF
+- [x] **Model comparison**: Isolation Forest vs One-Class SVM vs LOF vs Ensemble
+- [x] **Ensemble model**: IF (65%) + LOF (35%) weighted voting
+- [x] **Training logs** saved to `ml/training.log`
 
-### Test Results (Held-Out Test Set)
-- [x] **F1 Score: 0.9102** | Precision: 0.9594 | Recall: 0.8658
-- [x] **ROC-AUC: 0.9626** | FPR: 1.47%
-- [x] **Per-attack detection rates**:
-  - Port Scan: 100% | ICMP Flood: 100% | DNS Amplification: 99.3%
-  - Protocol Anomaly: 99.1% | Stealth Probe: 98.6% | SYN Flood: 97.6%
-  - UDP Flood: 95.5% | HTTP Flood: 87.5% | Slowloris: 82.9%
-  - Brute Force: 0% (handled by rule-based IDS)
+### Test Results (Held-Out Test Set — v3.0)
+- [x] **F1 Score: 0.9851** | Precision: 0.9755 | Recall: 0.9950
+- [x] **ROC-AUC: 0.9991** | FPR: 1.0%
+- [x] **Per-attack detection rates** (ALL ≥ 96.6%):
+  - Brute Force: **100%** ✅ (was 0% in v2.0, now fixed with connection_count + conn_rate)
+  - Port Scan: 100% | ICMP Flood: 100% | DNS Amplification: 100%
+  - SYN Flood: 100% | UDP Flood: 100% | Slowloris: 100%
+  - Stealth Probe: 99.3% | HTTP Flood: 99.2% | Protocol Anomaly: 96.6%
+
+### Visualizations (9 images in `ml/plots/`)
+- [x] `confusion_matrix.png` — Primary model confusion matrix heatmap
+- [x] `confusion_matrices_all.png` — All 4 models side-by-side
+- [x] `roc_curves.png` — ROC curves for all models
+- [x] `learning_curves.png` — Training vs validation accuracy + F1/loss curves
+- [x] `per_attack_detection.png` — Per-attack detection rate bar chart
+- [x] `feature_importance.png` — Feature importance with error bars
+- [x] `score_distribution.png` — Normal vs attack anomaly score histograms
+- [x] `model_comparison.png` — Grouped bar chart of all metrics
+- [x] `cross_validation.png` — 5-fold CV FPR consistency
 
 ### Inference
-- [x] Loads model + scaler from disk
-- [x] Computes all 8 features (raw + derived) matching training pipeline
+- [x] Loads model + LOF + scaler from disk
+- [x] Computes all 10 features (raw + derived) matching training pipeline
+- [x] Ensemble voting (IF+LOF) with fallback to IF-only
 - [x] Calibrated confidence scoring
 
 ### Artifacts (all tracked in git)
-- [x] `ml/model.pkl` — trained Isolation Forest (~59 MB)
-- [x] `ml/scaler.pkl` — StandardScaler (~1 KB)
+- [x] `ml/model.pkl` — trained Isolation Forest
+- [x] `ml/ensemble_lof.pkl` — trained LOF for ensemble
+- [x] `ml/scaler.pkl` — StandardScaler
 - [x] `ml/training_metrics.json` — full metrics + hyperparams + learning curve
 - [x] `ml/TRAINING_REPORT.md` — human-readable training report
+- [x] `ml/training.log` — complete training log
+- [x] `ml/plots/` — 9 visualization images
 - [x] `data/normal_traffic.csv` — 20,000 normal traffic samples
 - [x] `data/attack_traffic.csv` — 8,000 attack traffic samples
 
 ### Future Improvements
-- [ ] Add temporal/sequential features (sliding window aggregation)
+- [ ] Add temporal/sequential features (sliding window aggregation per-IP)
 - [ ] Implement online learning / model drift detection
 - [ ] Collect real-world traffic data for fine-tuning
-- [ ] Add ensemble voting (combine IF + LOF decisions)
 
 ---
 
@@ -199,6 +220,7 @@
 - [x] 7 specific attack generators: normal, port_scan, flood, syn_flood, slowloris, dns_amplification, anomaly
 - [x] 2 meta modes: `random` (65% normal, 35% attacks), `mixed_attack` (uniform random)
 - [x] Each generator uses distinct IP subnet ranges
+- [x] `connection_count` included in all generators
 - [x] Wired to `/traffic/simulate?mode=X&count=N`
 - [ ] Add burst mode (rapid-fire many packets for DDoS simulation)
 - [ ] Add auto-simulate mode (continuous background traffic for demo)
@@ -220,15 +242,25 @@
 
 ---
 
+## Version History
+
+| Version | Date | Changes |
+|---|---|---|
+| v1.0 | 2026-02-09 | Initial implementation (5K data, 5 features, basic IDS) |
+| v2.0 | 2026-02-10 | Anti-overfitting overhaul (20K+8K data, 8 features, grid search, per-attack eval) |
+| v3.0 | 2026-02-10 | Ensemble (IF+LOF), 10 features, 9 visualizations, training logs, brute force fix (0%→100%) |
+
 ## Git Repository
 
 **URL:** https://github.com/ArrinPaul/sentinelnet-ids
 
 ### What's Tracked
 - All source code (backend, frontend, ML scripts)
-- Trained ML model (`ml/model.pkl`, `ml/scaler.pkl`)
+- Trained ML models (`ml/model.pkl`, `ml/ensemble_lof.pkl`, `ml/scaler.pkl`)
 - Training metrics (`ml/training_metrics.json`)
 - Training report (`ml/TRAINING_REPORT.md`)
+- Training log (`ml/training.log`)
+- Visualization images (`ml/plots/*.png`)
 - Datasets (`data/normal_traffic.csv`, `data/attack_traffic.csv`)
 
 ### What's Ignored
@@ -247,7 +279,7 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 python ml/generate_data.py       # Generate dataset (28K rows)
-python ml/train_model.py         # Train model (~60 seconds)
+python ml/train_model.py         # Train model + generate plots (~70 seconds)
 uvicorn backend.main:app --port 8000
 
 # Frontend

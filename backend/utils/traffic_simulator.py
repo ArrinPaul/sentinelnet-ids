@@ -1,7 +1,7 @@
 """
 Traffic Simulator
 Generates synthetic traffic data for demo and testing purposes.
-Supports 7 modes: normal, port_scan, flood, syn_flood, slowloris,
+Supports 9 modes: normal, port_scan, flood, syn_flood, slowloris,
 dns_amplification, anomaly, random, and mixed_attack.
 """
 
@@ -18,6 +18,7 @@ def generate_normal_traffic() -> dict:
         "avg_packet_size": round(random.uniform(200, 1500), 1),
         "protocol": random.choice(["TCP", "UDP", "ICMP"]),
         "duration": round(random.uniform(1, 60), 1),
+        "connection_count": random.randint(1, 12),
     }
 
 
@@ -31,6 +32,7 @@ def generate_port_scan() -> dict:
         "avg_packet_size": round(random.uniform(40, 120), 1),
         "protocol": random.choice(["TCP", "UDP"]),
         "duration": round(random.uniform(0.5, 15), 1),
+        "connection_count": random.randint(15, 150),
     }
 
 
@@ -44,6 +46,7 @@ def generate_flood() -> dict:
         "avg_packet_size": round(random.uniform(20, 80), 1),
         "protocol": random.choice(["TCP", "UDP", "ICMP"]),
         "duration": round(random.uniform(1, 30), 1),
+        "connection_count": random.randint(30, 300),
     }
 
 
@@ -57,6 +60,7 @@ def generate_syn_flood() -> dict:
         "avg_packet_size": round(random.uniform(40, 75), 1),
         "protocol": "TCP",
         "duration": round(random.uniform(0.5, 10), 1),
+        "connection_count": random.randint(80, 400),
     }
 
 
@@ -70,6 +74,7 @@ def generate_slowloris() -> dict:
         "avg_packet_size": round(random.uniform(20, 55), 1),
         "protocol": "TCP",
         "duration": round(random.uniform(130, 600), 1),
+        "connection_count": random.randint(40, 180),
     }
 
 
@@ -83,6 +88,7 @@ def generate_dns_amplification() -> dict:
         "avg_packet_size": round(random.uniform(1200, 4000), 1),
         "protocol": "UDP",
         "duration": round(random.uniform(2, 60), 1),
+        "connection_count": random.randint(5, 40),
     }
 
 
@@ -96,6 +102,7 @@ def generate_protocol_anomaly() -> dict:
         "avg_packet_size": round(random.uniform(40, 500), 1),
         "protocol": random.choice(["GRE", "ESP", "AH", "SCTP", "IGMP"]),
         "duration": round(random.uniform(0.5, 30), 1),
+        "connection_count": random.randint(1, 25),
     }
 
 

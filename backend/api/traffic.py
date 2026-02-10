@@ -30,6 +30,7 @@ class TrafficInput(BaseModel):
     avg_packet_size: float
     protocol: str
     duration: float
+    connection_count: int = 1
 
     @field_validator("src_ip", "dst_ip")
     @classmethod
@@ -73,6 +74,7 @@ class TrafficRecord(BaseModel):
     avg_packet_size: float
     protocol: str
     duration: float
+    connection_count: int = 1
     timestamp: str
 
 
@@ -90,6 +92,7 @@ def ingest_traffic(data: TrafficInput):
         "avg_packet_size": data.avg_packet_size,
         "protocol": data.protocol,
         "duration": data.duration,
+        "connection_count": data.connection_count,
         "timestamp": datetime.now().isoformat(),
     }
 
